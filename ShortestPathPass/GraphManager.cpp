@@ -156,7 +156,7 @@ void GraphManager::printResult(){
         }
         if(&element != &excludeFunctions.back()){
             //std::cout << ",";
-            std::cout << "\n";
+            std::cout << ",";
         }
     }
 }
@@ -194,6 +194,7 @@ void GraphManager::excludeSelective() {
                         // detect make symbolic function and clear exclude functions vector
                         if(fName == sigFunction){
                             excludeFunctions.clear(); 
+                            continue;
                         }
 
                         //choiced
@@ -205,5 +206,5 @@ void GraphManager::excludeSelective() {
             }
         }
     }
-    //printResult();
+    printResult();
 }
