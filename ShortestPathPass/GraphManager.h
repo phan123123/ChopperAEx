@@ -27,7 +27,9 @@ class GraphManager {
         std::vector <std::pair<std::string, std::vector<int>>> excludeFunctions;
         void insertExclude(std::string fName, int line);
         void printResult();
-        std::string normalFunctions[7] = {"strtoul", "printf", "fprintf", "malloc", "klee_make_symbolic", "strtol", "strlen"};
+        std::string sigFunction = "klee_make_symbolic";
+        std::string normalFunctions[6] = {"strtoul", "printf", "fprintf", "malloc", "strtol", "strlen"};
+
 };
 
 #endif /* GRAPHMANAGER_H */

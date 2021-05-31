@@ -190,6 +190,11 @@ void GraphManager::excludeSelective() {
                         //check in shortest path
                         if (shortestPathContains(fName))
                             continue;
+                       
+                        // detect make symbolic function and clear exclude functions vector
+                        if(fName == sigFunction){
+                            excludeFunctions.clear(); 
+                        }
 
                         //choiced
                         const llvm::DebugLoc &debugInfo = instruction.getDebugLoc();
@@ -200,5 +205,5 @@ void GraphManager::excludeSelective() {
             }
         }
     }
-    printResult();
+    //printResult();
 }

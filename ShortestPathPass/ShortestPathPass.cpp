@@ -58,7 +58,7 @@ struct ShortestPathPass : public CallGraphSCCPass {
     GraphManager graphManager {CG};
     auto targetNode = graphManager.findTargetNode(Target.c_str(), allFunctions);
     graphManager.getShortestPath(targetNode);
-	graphManager.printShortestPath();
+	//graphManager.printShortestPath();
     graphManager.excludeSelective();
     // graphManager.excludeAll();
 
