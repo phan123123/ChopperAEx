@@ -15,8 +15,14 @@
 #include "llvm/Support/raw_ostream.h"
 
 #include "llvm/IR/Function.h"
+
 #include <llvm/Support/DebugLoc.h>
+
 #include <llvm/DebugInfo.h>
+
+#include <llvm/ADT/SCCIterator.h>
+
+#include "Define.h"
 
 GraphManager::GraphManager(llvm::CallGraph & CG): cg(CG) {
     root = std::make_shared < ExtendedCGNode > (CG.getRoot(), nullptr);
@@ -161,42 +167,118 @@ void GraphManager::printResult(){
     }
 }
 
-/* Look at all functions that can get called by the functions on the shortest path, and exclude everything that is not directly on the path */
+bool GraphManager::checkNormalFunction(std::string fName)
+{
+    for(std::string i : normalFunctions){
+        if(fName == i){
+            return true;
+        }
+    }
+    return false;
+}
+
+bool GraphManager::checkValuableFunction(llvm::Function *F){
+    // not functions
+    if(F->getName().startswith("llvm"))
+        return false;
+    std::string fName = F->getName().str();
+    //check normal functions
+    if (checkNormalFunction(fName))
+        return false;
+    //check in shortest path
+    if (shortestPathContains(fName))
+        return false;
+    return true;
+}
+
+int GraphManager::cyclomaticComplexity(llvm::Function *F){
+    auto iteratorStatus = statusMap.find(F);
+    auto iteratorComplex = complexMap.find(F);
+    bool exist = true;
+    if (iteratorStatus == statusMap.end()){
+        statusMap.insert(std::make_pair(F, HOLD));
+        complexMap.insert(std::make_pair(F, 0));
+        exist = false;
+    }
+    else if(iteratorStatus->second == HOLD){
+        return 1;
+    }
+    else if(iteratorStatus->second == DONE){
+        return iteratorComplex->second;
+    }
+
+    // cyclonmatic complexity in internal function
+    int result = 0;
+    for (llvm::Function::const_iterator I = F->begin(), IE = F->end(); I != IE; ++I) {
+        colorMap.insert(std::make_pair(&*I,WHITE));
+    }
+    for (auto &bb: *F){
+        result += blockCyclomaticComplexity(&bb);
+    }
+    colorMap.clear();
+    
+    // plus more from called function
+    for (auto &bb: *F){
+        for (auto &instruction : bb){
+            if (llvm::CallInst *callInst = llvm::dyn_cast<llvm::CallInst>(&instruction)) {
+                if (llvm::Function *calledFunction = callInst->getCalledFunction()){
+                    if (!checkValuableFunction(calledFunction))
+                        continue;
+                    result += cyclomaticComplexity(calledFunction);                    
+                }
+            }
+        }
+    }
+    iteratorStatus = statusMap.find(F);
+    iteratorComplex = complexMap.find(F);  
+    iteratorStatus->second = DONE;
+    iteratorComplex->second = result;
+//    llvm::outs() << "\n" << F->getName() << " +++ " << result << "\n";
+    return result;
+}
+
+int GraphManager::blockCyclomaticComplexity(const llvm::BasicBlock *BB){
+    int result =0;
+    colorMap.find(BB)->second = BLACK; 
+    const llvm::TerminatorInst *TInst = BB->getTerminator();
+    for (unsigned I = 0, NSucc = TInst->getNumSuccessors(); I < NSucc; ++I) {
+        llvm::BasicBlock *Succ = TInst->getSuccessor(I);
+        auto succIterator = colorMap.find(Succ);
+        Color succColor = succIterator->second; 
+        if (succColor == WHITE){
+            succIterator->second = BLACK;
+        }
+        else{
+            result += 1;
+        }
+    }
+    return result;
+}
+
 void GraphManager::excludeSelective() {
     for (auto rit = shortestPath.crbegin(); rit != shortestPath.crend(); rit++) {
         auto checkEnd = rit + 1;
         if (checkEnd == shortestPath.crend())
             break;
         //std::cout << "Function: " << ( * rit) -> getFnName() << std::endl;
+	    llvm::Function *F = ((*rit)->node->getFunction());
         for (auto &bb: *((*rit)->node->getFunction())){
             for (auto &instruction : bb){
                 if (llvm::CallInst *callInst = llvm::dyn_cast<llvm::CallInst>(&instruction)) {
                     if (llvm::Function *calledFunction = callInst->getCalledFunction()){
-                        // not functions
-                        if(calledFunction->getName().startswith("llvm"))
-                            continue;
+                        
                         std::string fName = calledFunction->getName().str();
-
-                        //check normal functions
-                        bool isNormal = false;
-                        for(std::string i:normalFunctions){
-                            if(fName == i){
-                                isNormal = true;
-                                break;
-                            }
-                        }
-                        if(isNormal) continue;
-
-                        //check in shortest path
-                        if (shortestPathContains(fName))
+                        if (!checkValuableFunction(calledFunction))
                             continue;
-                       
                         // detect make symbolic function and clear exclude functions vector
                         if(fName == sigFunction){
                             excludeFunctions.clear(); 
                             continue;
                         }
-
+                        
+                        if(cyclomaticComplexity(calledFunction) < MIN_COMPLEXITY)
+                            continue;
+                        
                         //choiced
                         const llvm::DebugLoc &debugInfo = instruction.getDebugLoc();
                         int line = debugInfo.getLine();

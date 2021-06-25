@@ -3,11 +3,32 @@
 
 #include <unordered_set>
 
+#include <unordered_map>
+
+#include <llvm/Analysis/CFG.h>
+
 #include "llvm/Analysis/CallGraph.h"
 
 #include "llvm/Analysis/CallGraphSCCPass.h"
 
 #include "ExtendedCGNode.h"
+
+#include <llvm/ADT/DenseMap.h>
+
+/* color to mark to basic block when calculate cyclomatic comlexity of function
+WHITE: still not visit
+BLACK: visited
+*/
+enum Color {WHITE, BLACK};
+
+/*status of function when calculate cyclomatic complexity
+DONE: calculated
+HOLD: in process
+FREE: still not calculate
+*/
+enum Status {DONE, HOLD, FREE};
+
+#define MIN_COMPLEXITY 10
 
 class GraphManager {
     public:
@@ -27,9 +48,15 @@ class GraphManager {
         std::vector <std::pair<std::string, std::vector<int>>> excludeFunctions;
         void insertExclude(std::string fName, int line);
         void printResult();
-        std::string sigFunction = "klee_make_symbolic";
-        std::string normalFunctions[6] = {"strtoul", "printf", "fprintf", "malloc", "strtol", "strlen"};
+        bool checkNormalFunction(std::string fName);
+        bool checkValuableFunction(llvm::Function *F);
 
+        std::unordered_map<const llvm::BasicBlock *, Color>colorMap;
+        std::unordered_map<const llvm::Function *, int> complexMap;
+        std::unordered_map<const llvm::Function *, Status> statusMap;
+	    int cyclomaticComplexity(llvm::Function *F);
+        int blockCyclomaticComplexity(const llvm::BasicBlock *BB);
+        std::string sigFunction = "klee_make_symbolic";
 };
 
 #endif /* GRAPHMANAGER_H */

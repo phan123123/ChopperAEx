@@ -37,6 +37,7 @@ namespace {
     
     for (Function &F : *module) {
       allFunctions.push_back(F.getName());
+   //   outs() << F.getName() << "\n";
     }
 
     return allFunctions;
