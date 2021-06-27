@@ -30,6 +30,7 @@ GraphManager::GraphManager(llvm::CallGraph & CG): cg(CG) {
 
 std::shared_ptr < ExtendedCGNode > GraphManager::findTargetNode(std::string targetFunction,
     const std::vector < std::string > & allFunctions) {
+    target = targetFunction;
     std::vector < std::string > path;
 
     std::unordered_set < std::shared_ptr < ExtendedCGNode > , ExtendedNodeHasher, ExtendedNodeEq > visited;
@@ -185,13 +186,12 @@ bool GraphManager::checkValuableFunction(llvm::Function *F){
     //check normal functions
     if (checkNormalFunction(fName))
         return false;
-    //check in shortest path
-    if (shortestPathContains(fName))
-        return false;
     return true;
 }
 
 int GraphManager::cyclomaticComplexity(llvm::Function *F){
+    if ( F->getName().str() == target)
+        return -999999;
     auto iteratorStatus = statusMap.find(F);
     auto iteratorComplex = complexMap.find(F);
     bool exist = true;
@@ -223,7 +223,7 @@ int GraphManager::cyclomaticComplexity(llvm::Function *F){
             if (llvm::CallInst *callInst = llvm::dyn_cast<llvm::CallInst>(&instruction)) {
                 if (llvm::Function *calledFunction = callInst->getCalledFunction()){
                     if (!checkValuableFunction(calledFunction))
-                        continue;
+                        continue; 
                     result += cyclomaticComplexity(calledFunction);                    
                 }
             }
@@ -270,13 +270,16 @@ void GraphManager::excludeSelective() {
                         std::string fName = calledFunction->getName().str();
                         if (!checkValuableFunction(calledFunction))
                             continue;
+			    //check in shortest path
+                        if (shortestPathContains(fName))
+                            continue;
                         // detect make symbolic function and clear exclude functions vector
                         if(fName == sigFunction){
                             excludeFunctions.clear(); 
                             continue;
                         }
-                        
-                        if(cyclomaticComplexity(calledFunction) < MIN_COMPLEXITY)
+                        //std::cout << fName << " --- " << cyclomaticComplexity(calledFunction) << "\n";
+                        if(cyclomaticComplexity(calledFunction) +1 < MIN_COMPLEXITY)
                             continue;
                         
                         //choiced

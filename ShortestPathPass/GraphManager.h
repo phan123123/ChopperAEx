@@ -28,7 +28,7 @@ FREE: still not calculate
 */
 enum Status {DONE, HOLD, FREE};
 
-#define MIN_COMPLEXITY 10
+#define MIN_COMPLEXITY 5
 
 class GraphManager {
     public:
@@ -42,6 +42,7 @@ class GraphManager {
         void excludeSelective();
     private:
         llvm::CallGraph & cg;
+        std::string target;
         std::shared_ptr < ExtendedCGNode > root;
         std::vector < std::shared_ptr < ExtendedCGNode >> shortestPath;
         std::vector < std::string > skippableFunctions;
