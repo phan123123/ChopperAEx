@@ -28,8 +28,6 @@ FREE: still not calculate
 */
 enum Status {DONE, HOLD, FREE};
 
-#define MIN_COMPLEXITY 0
-
 class GraphManager {
     public:
         GraphManager(llvm::CallGraph & CG);

@@ -28,7 +28,7 @@ namespace {
     Module *module = ParseIRFile(StringRef(Bitcode), error, context);
     
     if (!module) {
-      errs() << "Couldn't get module frum file " << Bitcode << "\n";
+      errs() << "Couldn't get module from file " << Bitcode << "\n";
     }
 
     verifyModule(*module);
@@ -45,9 +45,9 @@ namespace {
 }
 
 namespace llvm {
-struct ShortestPathPass : public CallGraphSCCPass {
+struct ChopperAEx : public CallGraphSCCPass {
   static char ID;
-  ShortestPathPass() : CallGraphSCCPass(ID) {}
+  ChopperAEx() : CallGraphSCCPass(ID) {}
 
   bool runOnSCC(CallGraphSCC &SCC) override {
     return false;
@@ -65,10 +65,10 @@ struct ShortestPathPass : public CallGraphSCCPass {
 
     return false;
   }
-}; // end of struct ShortestPathPass
+}; // end of struct ChopperAEx
 }  // end of anonymous namespace
 
-char ShortestPathPass::ID = 0;
-static RegisterPass<ShortestPathPass> X("shortestPath", "Shortest Path Pass",
+char ChopperAEx::ID = 0;
+static RegisterPass<ChopperAEx> X("exclude", "Chopper automatic exclusion",
                              false /* Only looks at CFG */,
                              false /* Analysis Pass */);                          
